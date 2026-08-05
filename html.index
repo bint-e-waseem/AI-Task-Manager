@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AI Agent Task Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            padding: 30px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header h1 span {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h2 .icon {
+            font-size: 1.2em;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(56, 239, 125, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349, #f45c43);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(235, 51, 73, 0.4);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(247, 151, 30, 0.4);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+        }
+
+        .btn-info:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-sm {
+            padding: 6px 15px;
+            font-size: 0.85em;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        /* Agent List */
+        .agent-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .agent-item:hover {
+            background: #f0f0ff;
+            transform: translateX(5px);
+        }
+
+        .agent-info {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .agent-role {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .agent-status {
+            display: inline-block;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .agent-tasks {
+            font-size: 0.85em;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        .task-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 8px;
+            border-left: 3px solid #38ef7d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-item .task-text {
+            flex: 1;
+        }
+
+        .task-item .task-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        /* Scrollable list */
+        .scrollable-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .scrollable-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollable-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .scrollable-list::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .scrollable-list::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state .emoji {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        /* File operations section */
+        .file-ops {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .agent-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🤖 <span>AI Agent Task Management</span></h1>
+            <p>Manage your AI agents and their tasks efficiently</p>
+        </div>
+
+        <!-- Alert Messages -->
+        <div id="alertMessage" class="alert"></div>
+
+        <!-- Main Grid -->
+        <div class="grid-2">
+            <!-- Left Panel: Add Agent & Assign Task -->
+            <div>
+                <!-- Add Agent Card -->
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2><span class="icon">👤</span> Add New Agent</h2>
+                    <form id="addAgentForm">
+                        <div class="form-group">
+                            <label for="agentName">Agent Name</label>
+                            <input type="text" id="agentName" placeholder="e.g., DataProcessor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="agentRole">Agent Role</label>
+                            <input type="text" id="agentRole" placeholder="e.g., Data Analyst" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">➕ Add Agent</button>
+                    </form>
+                </div>
+
+                <!-- Assign Task Card -->
+                <div class="card">
+                    <h2><span class="icon">📋</span> Assign Task</h2>
+                    <form id="assignTaskForm">
+                        <div class="form-group">
+                            <label for="taskAgentSelect">Select Agent</label>
+                            <select id="taskAgentSelect" required>
+                                <option value="">-- Select an agent --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskDescription">Task Description</label>
+                            <textarea id="taskDescription" placeholder="Describe the task..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success">📌 Assign Task</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Panel: Agent List & Tasks -->
+            <div>
+                <div class="card">
+                    <h2><span class="icon">📊</span> Agents Overview</h2>
+                    
+                    <!-- Stats -->
+                    <div class="stats" id="statsContainer">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalAgents">0</div>
+                            <div class="stat-label">Total Agents</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalTasks">0</div>
+                            <div class="stat-label">Total Tasks</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="activeAgents">0</div>
+                            <div class="stat-label">Active Agents</div>
+                        </div>
+                    </div>
+
+                    <!-- Agent List -->
+                    <div id="agentListContainer" class="scrollable-list">
+                        <div class="empty-state">
+                            <div class="emoji">🤖</div>
+                            <p>No agents created yet.<br>Add your first agent above!</p>
+                        </div>
+                    </div>
+
+                    <!-- File Operations (Bonus) -->
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                        <h3 style="font-size: 1em; color: #666; margin-bottom: 10px;">💾 File Operations (BONUS)</h3>
+                        <div class="file-ops">
+                            <button onclick="saveTasks()" class="btn btn-warning btn-sm">💾 Save Tasks</button>
+                            <button onclick="loadTasks()" class="btn btn-info btn-sm">📂 Load Tasks</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // DATA STORE
+        // ============================================
+        let agents = [];
+        let taskIdCounter = 0;
+
+        // Load from localStorage on init
+        function loadFromStorage() {
+            const saved = localStorage.getItem('agentTasks');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    agents = data.agents || [];
+                    taskIdCounter = data.taskIdCounter || 0;
+                    // Ensure each agent has a tasks array
+                    agents.forEach(agent => {
+                        if (!agent.tasks) agent.tasks = [];
+                        if (!agent.status) agent.status = 'Active';
+                    });
+                    return true;
+                } catch (e) {
+                    console.error('Error loading from storage:', e);
+                }
+            }
+            return false;
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem('agentTasks', JSON.stringify({
+                    agents: agents,
+                    taskIdCounter: taskIdCounter
+                }));
+                return true;
+            } catch (e) {
+                console.error('Error saving to storage:', e);
+                return false;
+            }
+        }
+
+        // ============================================
+        // AGENT CLASS (Python-like OOP in JS)
+        // ============================================
+        class Agent {
+            constructor(name, role) {
+                this.id = Date.now() + Math.random();
+                this.name = name;
+                this.role = role;
+                this.status = 'Active';
+                this.tasks = [];
+            }
+
+            assignTask(task) {
+                const taskObj = {
+                    id: ++taskIdCounter,
+                    description: task,
+                    assignedAt: new Date().toLocaleString()
+                };
+                this.tasks.push(taskObj);
+                return taskObj;
+            }
+
+            getTaskCount() {
+                return this.tasks.length;
+            }
+
+            getSummary() {
+                return `Agent: ${this.name} | Role: ${this.role} | Status: ${this.status} | Tasks: ${this.getTaskCount()}`;
+            }
+
+            deleteTask(taskId) {
+                this.tasks = this.tasks.filter(t => t.id !== taskId);
+            }
+        }
+
+        // ============================================
+        // DOM REFS & UTILITY FUNCTIONS
+        // ============================================
+        const alertEl = document.getElementById('alertMessage');
+        const agentListContainer = document.getElementById('agentListContainer');
+        const taskAgentSelect = document.getElementById('taskAgentSelect');
+        const totalAgentsEl = document.getElementById('totalAgents');
+        const totalTasksEl = document.getElementById('totalTasks');
+        const activeAgentsEl = document.getElementById('activeAgents');
+
+        function showAlert(message, type = 'success') {
+            alertEl.className = `alert alert-${type}`;
+            alertEl.textContent = message;
+            alertEl.style.display = 'block';
+            setTimeout(() => {
+                alertEl.style.display = 'none';
+            }, 4000);
+        }
+
+        function updateAgentSelect() {
+            taskAgentSelect.innerHTML = '<option value="">-- Select an agent --</option>';
+            agents.forEach(agent => {
+                const option = document.createElement('option');
+                option.value = agent.id;
+                option.textContent = `${agent.name} (${agent.role})`;
+                taskAgentSelect.appendChild(option);
+            });
+        }
+
+        function updateStats() {
+            const total = agents.length;
+            const tasks = agents.reduce((sum, a) => sum + a.getTaskCount(), 0);
+            const active = agents.filter(a => a.status === 'Active').length;
+            
+            totalAgentsEl.textContent = total;
+            totalTasksEl.textContent = tasks;
+            activeAgentsEl.textContent = active;
+        }
+
+        // ============================================
+        // RENDER AGENT LIST
+        // ============================================
+        function renderAgents() {
+            if (agents.length === 0) {
+                agentListContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="emoji">🤖</div>
+                        <p>No agents created yet.<br>Add your first agent above!</p>
+                    </div>
+                `;
+                updateStats();
+                updateAgentSelect();
+                return;
+            }
+
+            let html = '';
+            agents.forEach((agent, index) => {
+                const statusClass = agent.status === 'Active' ? 'status-active' : 'status-inactive';
+                
+                html += `
+                    <div class="agent-item" data-agent-id="${agent.id}">
+                        <div class="agent-info">
+                            <div>
+                                <span class="agent-name">${agent.name}</span>
+                                <span class="agent-role">${agent.role}</span>
+                                <span class="agent-status ${statusClass}">${agent.status}</span>
+                            </div>
+                            <div class="agent-tasks">
+                                <strong>${agent.getTaskCount()} tasks</strong>
+                                <button onclick="toggleAgentStatus('${agent.id}')" class="btn btn-sm ${agent.status === 'Active' ? 'btn-danger' : 'btn-success'}" style="margin-left: 10px; padding: 2px 10px; font-size: 0.75em;">
+                                    ${agent.status === 'Active' ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteAgent('${agent.id}')" class="btn btn-sm btn-danger" style="margin-left: 5px; padding: 2px 10px; font-size: 0.75em;">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Render tasks for this agent
+                if (agent.tasks.length > 0) {
+                    html += `<div style="margin: 5px 0 15px 20px; padding-left: 15px; border-left: 2px solid #e0e0e0;">`;
+                    agent.tasks.forEach(task => {
+                        html += `
+                            <div class="task-item">
+                                <span class="task-text">📌 ${task.description}</span>
+                                <span style="font-size: 0.8em; color: #999;">${task.assignedAt}</span>
+                                <button onclick="deleteTask('${agent.id}', ${task.id})" class="btn btn-sm btn-danger" style="padding: 2px 8px; font-size: 0.7em;">
+                                    ✕
+                                </button>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<div style="margin: 5px 0 15px 30px; color: #999; font-size: 0.9em;">No tasks assigned yet.</div>`;
+                }
+            });
+
+            agentListContainer.innerHTML = html;
+            updateStats();
+            updateAgentSelect();
+            saveToStorage();
+        }
+
+        // ============================================
+        // AGENT MANAGEMENT FUNCTIONS
+        // ============================================
+        function addAgent(name, role) {
+            if (!name || !role) {
+                showAlert('Please fill in all fields.', 'error');
+                return false;
+            }
+
+            // Check for duplicate name
+            if (agents.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+                showAlert(`Agent "${name}" already exists!`, 'error');
+                return false;
+            }
+
+            const agent = new Agent(name, role);
+            agents.push(agent);
+            renderAgents();
+            showAlert(`✅ Agent "${name}" added successfully!`, 'success');
+            return true;
+        }
+
+        function deleteAgent(agentId) {
+            if (!confirm('Are you sure you want to delete this agent and all their tasks?')) return;
+            
+            const agent = agents.find(a => a.id == agentId);
+            if (agent) {
+                agents = agents.filter(a => a.id != agentId);
+                renderAgents();
+                showAlert(`🗑️ Agent "${agent.name}" deleted.`, 'info');
+            }
+        }
+
+        function toggleAgentStatus(agentId) {
+            const agent = agents.find(a => a.id == agentId);
+            if (agent) {
+                agent.status = agent.status === 'Active' ? 'Inactive' : 'Active';
+                renderAgents();
+                showAlert(`🔄 Agent "${agent.name}" is now ${agent.status}.`, 'info');
+            }
+        }
+
+        // ============================================
+        // TASK MANAGEMENT FUNCTIONS
+        // ============================================
+        function assignTask(agentId, taskDescription) {
+            if (!agentId) {
+                showAlert('Please select an agent.', 'error');
+                return false;
+            }
+
+            if (!taskDescription || taskDescription.trim() === '') {
+                showAlert('Please enter a task description.', 'error');
+                return false;
+            }
+
+            const agent = agents.find(a => a.id == agentId);
+            if (!agent) {
+                showAlert('Agent not found!', 'error');
+                return false;
+            }
+
+            agent.assignTask(taskDescription.trim());
+            renderAgents();
+            showAlert(`✅ Task assigned to "${agent.name}" successfully!`, 'success');
+            return true;
+        }
+
+        function deleteTask(agentId, taskId) {
+            if (!confirm('Delete this task?')) return;
+            
+            const agent = agents.find(a => a.id == agentId);
+            if (agent) {
+                agent.deleteTask(taskId);
+                renderAgents();
+                showAlert('🗑️ Task deleted.', 'info');
+            }
+        }
+
+        // ============================================
+        // FILE OPERATIONS (BONUS - localStorage simulation)
+        // ============================================
+        function saveTasks() {
+            try {
+                const data = {
+                    agents: agents,
+                    taskIdCounter: taskIdCounter,
+                    savedAt: new Date().toISOString()
+                };
+                localStorage.setItem('agentTasksBackup', JSON.stringify(data));
+                showAlert('💾 Tasks saved successfully to localStorage!', 'success');
+            } catch (e) {
+                showAlert('❌ Error saving tasks: ' + e.message, 'error');
+            }
+        }
+
+        function loadTasks() {
+            try {
+                const saved = localStorage.getItem('agentTasksBackup');
+                if (!saved) {
+                    showAlert('ℹ️ No saved data found.', 'info');
+                    return;
+                }
+
+                const data = JSON.parse(saved);
+                if (data.agents && Array.isArray(data.agents)) {
+                    // Restore agents with their tasks
+                    agents = data.agents;
+                    taskIdCounter = data.taskIdCounter || 0;
+                    
+                    // Ensure each agent is a proper Agent instance
+                    agents = agents.map(a => {
+                        const agent = new Agent(a.name, a.role);
+                        agent.id = a.id;
+                        agent.status = a.status || 'Active';
+                        agent.tasks = a.tasks || [];
+                        return agent;
+                    });
+
+                    renderAgents();
+                    showAlert('📂 Tasks loaded successfully!', 'success');
+                } else {
+                    showAlert('❌ Invalid data format.', 'error');
+                }
+            } catch (e) {
+                showAlert('❌ Error loading tasks: ' + e.message, 'error');
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        document.getElementById('addAgentForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('agentName').value.trim();
+            const role = document.getElementById('agentRole').value.trim();
+            
+            if (addAgent(name, role)) {
+                this.reset();
+            }
+        });
+
+        document.getElementById('assignTaskForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const agentId = document.getElementById('taskAgentSelect').value;
+            const taskDesc = document.getElementById('taskDescription').value.trim();
+            
+            if (assignTask(agentId, taskDesc)) {
+                document.getElementById('taskDescription').value = '';
+            }
+        });
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        // Try to load from localStorage
+        if (!loadFromStorage()) {
+            // Add some sample data if no saved data
+            const sampleAgents = [
+                { name: 'DataProcessor', role: 'Data Analyst' },
+                { name: 'ChatBot', role: 'Customer Support' },
+                { name: 'ImageAnalyzer', role: 'Computer Vision' }
+            ];
+
+            sampleAgents.forEach(({ name, role }) => {
+                const agent = new Agent(name, role);
+                agent.assignTask(`Sample task for ${name}: Process incoming data`);
+                agent.assignTask(`Sample task 2 for ${name}: Generate report`);
+                agents.push(agent);
+            });
+
+            showAlert('📚 Sample agents loaded!', 'info');
+        }
+
+        renderAgents();
+
+        // Auto-save every 30 seconds
+        setInterval(() => {
+            saveToStorage();
+        }, 30000);
+
+        console.log('🤖 AI Agent Task Management System initialized!');
+        console.log(`📊 ${agents.length} agents loaded.`);
+    </script>
+</body>
+</html>
