@@ -222,14 +222,6 @@ Contributions are welcome! Here's how you can help:
    ```
 5. **Open a Pull Request**
 
-### Suggested Improvements
-- [ ] Add priority levels to tasks
-- [ ] Implement task deadlines
-- [ ] Create GUI interface
-- [ ] Add database support (SQLite)
-- [ ] Implement task statuses (Pending, In Progress, Complete)
-- [ ] Add agent collaboration features
-
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
