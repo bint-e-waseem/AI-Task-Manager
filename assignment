@@ -1,0 +1,270 @@
+class Agent:
+    """
+    Agent class representing an AI agent with task management capabilities.
+    """
+    def __init__(self, name, role):
+        """
+        Constructor to initialize an Agent object.
+        
+        Args:
+            name (str): The name of the agent.
+            role (str): The role of the agent.
+        """
+        self.name = name
+        self.role = role
+        self.status = "Active"  # Default status
+        self.tasks = []  # List to store tasks assigned to this agent
+    
+    def assign_task(self, task):
+        """
+        Assign a task to the agent.
+        
+        Args:
+            task (str): The task description to be assigned.
+        """
+        self.tasks.append(task)
+        print(f"Task '{task}' assigned to {self.name}.")
+    
+    def display_tasks(self):
+        """
+        Display all tasks assigned to the agent.
+        """
+        if not self.tasks:
+            print(f"{self.name} ({self.role}) has no tasks assigned.")
+        else:
+            print(f"\n--- Tasks for {self.name} ({self.role}) ---")
+            for i, task in enumerate(self.tasks, 1):
+                print(f"{i}. {task}")
+            print("-" * 40)
+    
+    def get_summary(self):
+        """
+        Get a summary of the agent's tasks.
+        
+        Returns:
+            str: A formatted summary string.
+        """
+        task_count = len(self.tasks)
+        return f"Agent: {self.name} | Role: {self.role} | Status: {self.status} | Tasks: {task_count}"
+
+
+class AgentManager:
+    """
+    Manager class to handle multiple agents and file operations.
+    """
+    def __init__(self):
+        """
+        Constructor to initialize the AgentManager with an empty agents list.
+        """
+        self.agents = []
+        self.filename = "tasks_data.txt"
+    
+    def add_agent(self, agent):
+        """
+        Add an agent to the system.
+        
+        Args:
+            agent (Agent): The agent object to add.
+        """
+        self.agents.append(agent)
+        print(f"Agent {agent.name} added successfully!")
+    
+    def display_all_agents(self):
+        """
+        Display summary of all agents and their tasks.
+        """
+        if not self.agents:
+            print("No agents in the system.")
+            return
+        
+        print("\n" + "=" * 60)
+        print("AGENT TASK MANAGEMENT SYSTEM - SUMMARY")
+        print("=" * 60)
+        
+        for agent in self.agents:
+            print(agent.get_summary())
+            agent.display_tasks()
+        
+        # Calculate total tasks
+        total_tasks = sum(len(agent.tasks) for agent in self.agents)
+        print(f"\nTotal Agents: {len(self.agents)}")
+        print(f"Total Tasks: {total_tasks}")
+        print("=" * 60)
+    
+    def save_tasks_to_file(self):
+        """
+        Save all agents and their tasks to a text file.
+        """
+        try:
+            with open(self.filename, 'w') as file:
+                for agent in self.agents:
+                    file.write(f"Agent: {agent.name}|{agent.role}|{agent.status}\n")
+                    file.write(f"Tasks: {'|'.join(agent.tasks)}\n")
+                    file.write("---\n")
+            print(f"\nTasks successfully saved to {self.filename}!")
+        except Exception as e:
+            print(f"Error saving tasks: {e}")
+    
+    def load_tasks_from_file(self):
+        """
+        Load agents and their tasks from a text file.
+        
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        try:
+            with open(self.filename, 'r') as file:
+                lines = file.readlines()
+                
+                if not lines:
+                    print("No data found in file.")
+                    return False
+                
+                # Clear existing agents
+                self.agents = []
+                
+                current_agent = None
+                for line in lines:
+                    line = line.strip()
+                    
+                    if line.startswith("Agent:"):
+                        # Parse agent data
+                        parts = line.replace("Agent: ", "").split("|")
+                        if len(parts) >= 2:
+                            name, role = parts[0], parts[1]
+                            status = parts[2] if len(parts) > 2 else "Active"
+                            
+                            current_agent = Agent(name, role)
+                            current_agent.status = status
+                            self.agents.append(current_agent)
+                    
+                    elif line.startswith("Tasks:") and current_agent:
+                        # Parse tasks
+                        tasks_str = line.replace("Tasks: ", "")
+                        if tasks_str:
+                            tasks = tasks_str.split("|")
+                            current_agent.tasks.extend(tasks)
+                    
+                    elif line == "---":
+                        current_agent = None
+            
+            print(f"\nTasks successfully loaded from {self.filename}!")
+            return True
+            
+        except FileNotFoundError:
+            print(f"\nNo saved file found. Starting with empty system.")
+            return False
+        except Exception as e:
+            print(f"Error loading tasks: {e}")
+            return False
+
+
+def main():
+    """
+    Main function to run the Agent Task Management System with user interaction.
+    """
+    print("=" * 60)
+    print("🤖 AI AGENT TASK MANAGEMENT SYSTEM 🤖")
+    print("=" * 60)
+    
+    # Create the manager
+    manager = AgentManager()
+    
+    # Load tasks from file (BONUS feature)
+    manager.load_tasks_from_file()
+    
+    while True:
+        print("\n" + "-" * 40)
+        print("MAIN MENU")
+        print("-" * 40)
+        print("1. Add a new agent")
+        print("2. Assign task to an agent")
+        print("3. Display all agents and their tasks")
+        print("4. Display specific agent's tasks")
+        print("5. Save tasks to file (BONUS)")
+        print("6. Load tasks from file (BONUS)")
+        print("7. Exit")
+        print("-" * 40)
+        
+        choice = input("\nEnter your choice (1-7): ").strip()
+        
+        if choice == "1":
+            # Add a new agent
+            name = input("Enter agent name: ").strip()
+            role = input("Enter agent role: ").strip()
+            
+            if name and role:
+                new_agent = Agent(name, role)
+                manager.add_agent(new_agent)
+            else:
+                print("Name and role cannot be empty!")
+        
+        elif choice == "2":
+            # Assign task to an agent
+            if not manager.agents:
+                print("No agents available. Please add an agent first.")
+                continue
+            
+            print("\nAvailable agents:")
+            for i, agent in enumerate(manager.agents, 1):
+                print(f"{i}. {agent.name} ({agent.role})")
+            
+            try:
+                agent_choice = int(input("Select agent (number): ")) - 1
+                if 0 <= agent_choice < len(manager.agents):
+                    task = input("Enter task description: ").strip()
+                    if task:
+                        manager.agents[agent_choice].assign_task(task)
+                    else:
+                        print("Task description cannot be empty!")
+                else:
+                    print("Invalid agent selection!")
+            except ValueError:
+                print("Please enter a valid number!")
+        
+        elif choice == "3":
+            # Display all agents
+            manager.display_all_agents()
+        
+        elif choice == "4":
+            # Display specific agent's tasks
+            if not manager.agents:
+                print("No agents available.")
+                continue
+            
+            print("\nAvailable agents:")
+            for i, agent in enumerate(manager.agents, 1):
+                print(f"{i}. {agent.name} ({agent.role})")
+            
+            try:
+                agent_choice = int(input("Select agent (number): ")) - 1
+                if 0 <= agent_choice < len(manager.agents):
+                    manager.agents[agent_choice].display_tasks()
+                else:
+                    print("Invalid agent selection!")
+            except ValueError:
+                print("Please enter a valid number!")
+        
+        elif choice == "5":
+            # Save tasks to file (BONUS)
+            manager.save_tasks_to_file()
+        
+        elif choice == "6":
+            # Load tasks from file (BONUS)
+            manager.load_tasks_from_file()
+        
+        elif choice == "7":
+            # Exit with option to save
+            print("\nExiting system...")
+            save_choice = input("Do you want to save tasks before exiting? (y/n): ").strip().lower()
+            if save_choice == 'y':
+                manager.save_tasks_to_file()
+            print("Goodbye! 👋")
+            break
+        
+        else:
+            print("Invalid choice! Please enter a number between 1 and 7.")
+
+
+if __name__ == "__main__":
+    main()
