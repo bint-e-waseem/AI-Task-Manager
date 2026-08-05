@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Ops — Control Deck</title>
+
+<!-- Fonts: JetBrains Mono carries the "readout" personality (headers, badges, log feed,
+     stat figures); Inter is the quiet body/UI face used for everything people read at length. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     A "control deck" for a small AI-agent roster: dark slate ops
+     console, signal-teal for active/live states, amber for idle,
+     coral reserved only for destructive actions.
+     ============================================================ */
+  :root{
+    --bg:            #0D1113;
+    --bg-grid:       #10161A;
+    --panel:         #151B1E;
+    --panel-alt:     #1B2226;
+    --panel-raise:   #202A2E;
+    --border:        #262F34;
+    --border-soft:   #1D2529;
+
+    --text:          #E7ECEE;
+    --text-muted:    #8A979E;
+    --text-faint:    #57646B;
+
+    --accent:        #38D9C4;   /* signal teal — active / primary */
+    --accent-dim:    rgba(56,217,196,0.14);
+    --accent-strong: #1FBFAA;
+
+    --warn:          #F2A93B;   /* idle */
+    --warn-dim:      rgba(242,169,59,0.14);
+
+    --danger:        #FF6B5B;   /* destructive / offline */
+    --danger-dim:    rgba(255,107,91,0.13);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html{ color-scheme: dark; }
+
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, rgba(56,217,196,0.05), transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  ::selection{ background:var(--accent-dim); color:var(--accent); }
+
+  /* subtle scanline / grid texture behind everything, control-room feel */
+  .deck-bg{
+    position:fixed; inset:0; z-index:-1;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity:0.35;
+    mask-image: radial-gradient(ellipse at top, black, transparent 75%);
+  }
+
+  a{ color:inherit; }
+  button{ font-family:inherit; cursor:pointer; }
+  input, select{ font-family:inherit; }
+
+  /* focus visibility kept everywhere, including custom controls */
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+
+  .mono{ font-family:var(--font-mono); }
+
+  /* ============================================================
+     APP SHELL
+     ============================================================ */
+  .app{
+    display:flex; flex-direction:column;
+    min-height:100vh;
+    max-width:1400px;
+    margin:0 auto;
+    padding: 20px 24px 32px;
+  }
+
+  /* ---------------- HEADER / TOP BAR ---------------- */
+  header.topbar{
+    display:flex; align-items:center; gap:20px;
+    padding:14px 18px;
+    background:linear-gradient(180deg, var(--panel-alt), var(--panel));
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    flex-shrink:0;
+  }
+  .brand-mark{
+    width:34px; height:34px; border-radius:8px;
+    background:conic-gradient(from 180deg, var(--accent), #1a6f63, var(--accent));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:13px; color:#04211d;
+    box-shadow:0 0 0 1px var(--border), 0 0 18px rgba(56,217,196,0.25);
+  }
+  .brand-text .title{
+    font-family:var(--font-mono); font-weight:700; font-size:15px; letter-spacing:0.06em;
+  }
+  .brand-text .subtitle{
+    font-size:11px; color:var(--text-faint); letter-spacing:0.08em; text-transform:uppercase;
+  }
+
+  .search-wrap{
+    flex:1 1 220px; max-width:420px;
+    position:relative;
+  }
+  .search-wrap input{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:9px 12px 9px 34px;
+    border-radius:var(--radius-md);
+    font-size:13.5px;
+  }
+  .search-wrap input::placeholder{ color:var(--text-faint); }
+  .search-wrap svg{
+    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    width:15px; height:15px; stroke:var(--text-faint);
+  }
+
+  .topbar-stats{
+    display:flex; gap:10px; margin-left:auto; flex-wrap:wrap;
+  }
+  .stat-pill{
+    display:flex; flex-direction:column; align-items:flex-end;
+    padding:6px 14px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    min-width:84px;
+  }
+  .stat-pill .num{ font-family:var(--font-mono); font-weight:700; font-size:16px; }
+  .stat-pill .lbl{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.07em; }
+  .stat-pill.accent .num{ color:var(--accent); }
+  .stat-pill.warn .num{ color:var(--warn); }
+
+  /* ---------------- MAIN LAYOUT ---------------- */
+  .layout{
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    gap:18px;
+    align-items:start;
+    flex:1;
+  }
+
+  /* ---------------- SIDEBAR: ROSTER ---------------- */
+  .sidebar{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:14px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .sidebar-head{
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .sidebar-head h2{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--text-muted);
+  }
+
+  .btn{
+    border:1px solid var(--border);
+    background:var(--panel-raise);
+    color:var(--text);
+    padding:7px 12px;
+    border-radius:var(--radius-sm);
+    font-size:12.5px; font-weight:600;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:background .15s, border-color .15s, transform .05s;
+  }
+  .btn:hover{ background:#26333a; border-color:#33424a; }
+  .btn:active{ transform:translateY(1px); }
+  .btn-accent{
+    background:var(--accent); border-color:var(--accent); color:#062824;
+  }
+  .btn-accent:hover{ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn-ghost{
+    background:transparent;
+  }
+  .btn-danger{
+    background:transparent; border-color:var(--border); color:var(--danger);
+  }
+  .btn-danger:hover{ background:var(--danger-dim); border-color:var(--danger); }
+  .btn-sm{ padding:5px 9px; font-size:11.5px; }
+  .btn-block{ width:100%; justify-content:center; }
+
+  .roster{
+    display:flex; flex-direction:column; gap:6px;
+    max-height:560px; overflow-y:auto; padding-right:2px;
+  }
+  .roster::-webkit-scrollbar{ width:6px; }
+  .roster::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+
+  .roster-empty{
+    color:var(--text-faint); font-size:12.5px; text-align:center; padding:24px 8px;
+  }
+
+  .agent-row{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 10px;
+    border-radius:var(--radius-md);
+    border:1px solid transparent;
+    background:transparent;
+    cursor:pointer;
+    text-align:left;
+    width:100%;
+  }
+  .agent-row:hover{ background:var(--panel-alt); }
+  .agent-row.selected{
+    background:var(--accent-dim);
+    border-color:rgba(56,217,196,0.35);
+  }
+
+  /* Signature element: signal-ring avatar. Ring color + pulse encode
+     live status at a glance, like an ops-board indicator light. */
+  .signal-avatar{
+    position:relative; flex-shrink:0;
+    width:36px; height:36px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg);
+    font-family:var(--font-mono); font-weight:700; font-size:12px;
+    border:2px solid var(--border);
+  }
+  .signal-avatar.active{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(56,217,196,0.12); }
+  .signal-avatar.idle{ border-color:var(--warn); box-shadow:0 0 0 3px rgba(242,169,59,0.12); }
+  .signal-avatar.offline{ border-color:var(--text-faint); }
+  .signal-avatar .dot{
+    position:absolute; bottom:-1px; right:-1px;
+    width:10px; height:10px; border-radius:50%;
+    border:2px solid var(--panel);
+  }
+  .signal-avatar.active .dot{ background:var(--accent); animation:pulse 1.8s ease-in-out infinite; }
+  .signal-avatar.idle .dot{ background:var(--warn); }
+  .signal-avatar.offline .dot{ background:var(--text-faint); }
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(56,217,196,0.55); }
+    50%{ box-shadow:0 0 0 4px rgba(56,217,196,0); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .signal-avatar.active .dot{ animation:none; }
+  }
+
+  .agent-row-meta{ min-width:0; flex:1; }
+  .agent-row-meta .nm{ font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .agent-row-meta .rl{ font-size:11px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .task-badge{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-muted);
+    background:var(--bg); border:1px solid var(--border);
+    padding:2px 7px; border-radius:20px; flex-shrink:0;
+  }
+
+  /* ---------------- MAIN: AGENT DETAIL ---------------- */
+  .main{
+    display:flex; flex-direction:column; gap:18px;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:20px;
+  }
+
+  .empty-state{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:10px; padding:70px 20px;
+    color:var(--text-muted);
+  }
+  .empty-state .glyph{
+    width:52px; height:52px; border-radius:50%;
+    border:1px dashed var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); color:var(--text-faint); font-size:20px;
+  }
+  .empty-state h3{ color:var(--text); font-size:15px; font-weight:600; }
+  .empty-state p{ font-size:13px; max-width:320px; }
+
+  .detail-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+    margin-bottom:18px; flex-wrap:wrap;
+  }
+  .detail-id{ display:flex; align-items:center; gap:14px; }
+  .detail-id .signal-avatar{ width:48px; height:48px; font-size:15px; }
+  .detail-id .nm{ font-size:19px; font-weight:700; }
+  .detail-id .rl{ font-size:12.5px; color:var(--text-muted); }
+  .status-toggle{
+    margin-top:4px; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.05em;
+    text-transform:uppercase; border:1px solid var(--border); background:var(--bg);
+    padding:3px 9px; border-radius:20px; color:var(--text-muted);
+  }
+  .status-toggle.active{ color:var(--accent); border-color:rgba(56,217,196,.4); }
+  .status-toggle.idle{ color:var(--warn); border-color:rgba(242,169,59,.4); }
+  .status-toggle.offline{ color:var(--danger); border-color:rgba(255,107,91,.4); }
+
+  .detail-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  /* task composer */
+  .task-form{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .task-form input{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:10px 12px;
+    border-radius:var(--radius-md);
+    font-size:13.5px;
+  }
+  .task-form input::placeholder{ color:var(--text-faint); }
+
+  .task-list{ display:flex; flex-direction:column; gap:6px; }
+  .task-list-empty{
+    color:var(--text-faint); font-size:13px; padding:20px 4px; text-align:center;
+    border:1px dashed var(--border-soft); border-radius:var(--radius-md);
+  }
+
+  .task-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px;
+    background:var(--panel-alt);
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius-md);
+  }
+  .task-check{
+    width:18px; height:18px; border-radius:5px;
+    border:1.5px solid var(--border);
+    background:var(--bg);
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .task-check.done{ background:var(--accent); border-color:var(--accent); }
+  .task-check svg{ width:11px; height:11px; stroke:#062824; display:none; }
+  .task-check.done svg{ display:block; }
+
+  .task-text{ flex:1; font-size:13.5px; }
+  .task-text.done{ color:var(--text-faint); text-decoration:line-through; }
+
+  .task-idx{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-faint); width:20px; flex-shrink:0;
+  }
+
+  .task-del{
+    opacity:0; width:24px; height:24px; border-radius:6px;
+    border:1px solid transparent; background:transparent; color:var(--text-faint);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:opacity .12s;
+  }
+  .task-item:hover .task-del{ opacity:1; }
+  .task-del:hover{ color:var(--danger); background:var(--danger-dim); border-color:var(--danger); }
+  .task-del svg{ width:13px; height:13px; }
+
+  /* ---------------- OPS LOG (bottom console) ---------------- */
+  .ops-log{
+    background:#0A0D0E;
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    margin-top:18px;
+    overflow:hidden;
+  }
+  .ops-log-head{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 16px;
+    border-bottom:1px solid var(--border-soft);
+    font-family:var(--font-mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .ops-log-head .lights{ display:flex; gap:5px; margin-right:4px; }
+  .ops-log-head .lights span{ width:8px; height:8px; border-radius:50%; background:var(--border); }
+  .ops-log-head .lights span:nth-child(1){ background:#4a2c2a; }
+  .ops-log-head .lights span:nth-child(2){ background:#4a3f22; }
+  .ops-log-head .lights span:nth-child(3){ background:#1f4a3d; }
+
+  .ops-log-body{
+    max-height:150px; overflow-y:auto;
+    padding:10px 16px 14px;
+    font-family:var(--font-mono); font-size:12px;
+    display:flex; flex-direction:column-reverse; gap:5px;
+  }
+  .ops-log-body::-webkit-scrollbar{ width:6px; }
+  .ops-log-body::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; }
+  .log-line{ display:flex; gap:10px; color:var(--text-muted); line-height:1.5; }
+  .log-line .t{ color:var(--text-faint); flex-shrink:0; }
+  .log-line .dot{ flex-shrink:0; }
+  .log-line.add .dot{ color:var(--accent); }
+  .log-line.warn .dot{ color:var(--warn); }
+  .log-line.danger .dot{ color:var(--danger); }
+  .log-line .msg{ color:var(--text); }
+
+  /* ---------------- MODAL ---------------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(5,7,8,0.7);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px; z-index:50;
+    backdrop-filter:blur(2px);
+  }
+  .modal-overlay[hidden]{ display:none; }
+  .modal{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:22px; width:100%; max-width:380px;
+  }
+  .modal h3{ font-size:15px; margin-bottom:16px; font-family:var(--font-mono); letter-spacing:0.02em; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:11.5px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
+  .field input{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:var(--radius-md); font-size:13.5px;
+  }
+  .modal-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+  .field-error{ color:var(--danger); font-size:11.5px; margin-top:5px; display:none; }
+  .field-error.show{ display:block; }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap;
+  }
+
+  /* ---------------- RESPONSIVE ---------------- */
+  @media (max-width: 880px){
+    .layout{ grid-template-columns: 1fr; }
+    .roster{ max-height:280px; }
+    .topbar{ flex-direction:column; align-items:stretch; }
+    .topbar-stats{ margin-left:0; }
+  }
+</style>
+</head>
+<body>
+<div class="deck-bg" aria-hidden="true"></div>
+
+<div class="app">
+
+  <!-- ============ HEADER ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">AO</div>
+      <div class="brand-text">
+        <div class="title">AGENT&nbsp;OPS</div>
+        <div class="subtitle">Task control deck</div>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Search agents or roles…" aria-label="Search agents">
+    </div>
+
+    <div class="topbar-stats" aria-live="polite">
+      <div class="stat-pill accent"><span class="num mono" id="statAgents">0</span><span class="lbl">Agents</span></div>
+      <div class="stat-pill"><span class="num mono" id="statTasks">0</span><span class="lbl">Tasks</span></div>
+      <div class="stat-pill warn"><span class="num mono" id="statOpen">0</span><span class="lbl">Open</span></div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN LAYOUT ============ -->
+  <div class="layout">
+
+    <!-- ---------- SIDEBAR: ROSTER ---------- -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>Roster</h2>
+        <button class="btn btn-accent btn-sm" id="openAddAgent">+ Agent</button>
+      </div>
+      <div class="roster" id="rosterList" role="listbox" aria-label="Agent roster"></div>
+
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <button class="btn btn-ghost btn-sm btn-block" id="exportBtn">Export JSON</button>
+        <button class="btn btn-ghost btn-sm btn-block" id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" accept="application/json" class="visually-hidden">
+      </div>
+    </aside>
+
+    <!-- ---------- MAIN: DETAIL ---------- -->
+    <main class="main">
+      <section class="panel" id="detailPanel"></section>
+
+      <!-- Ops log: signature console strip, mirrors the original app's action feedback -->
+      <section class="ops-log">
+        <div class="ops-log-head">
+          <span class="lights" aria-hidden="true"><span></span><span></span><span></span></span>
+          ops&nbsp;log
+        </div>
+        <div class="ops-log-body" id="opsLog"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ============ ADD AGENT MODAL ============ -->
+<div class="modal-overlay" id="addAgentModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">Add new agent</h3>
+    <form id="addAgentForm" novalidate>
+      <div class="field">
+        <label for="agentName">Name</label>
+        <input type="text" id="agentName" placeholder="e.g. Atlas" autocomplete="off">
+        <div class="field-error" id="nameError">Name can't be empty.</div>
+      </div>
+      <div class="field">
+        <label for="agentRole">Role</label>
+        <input type="text" id="agentRole" placeholder="e.g. Research Analyst" autocomplete="off">
+        <div class="field-error" id="roleError">Role can't be empty.</div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelAddAgent">Cancel</button>
+        <button type="submit" class="btn btn-accent">Add agent</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     STATE
+     Kept entirely in memory — no browser storage is used, so
+     Export/Import JSON stands in for the original app's
+     save-to-file / load-from-file workflow.
+     ============================================================ */
+  let agents = [
+    { id: "a1", name: "Atlas",  role: "Research Analyst", status: "active",
+      tasks: [
+        { id: "t1", text: "Summarize competitor pricing report", done: false },
+        { id: "t2", text: "Draft Q3 market brief", done: true }
+      ]},
+    { id: "a2", name: "Iris",   role: "QA Engineer", status: "idle",
+      tasks: [
+        { id: "t3", text: "Regression-test checkout flow", done: false }
+      ]},
+    { id: "a3", name: "Nova",   role: "DevOps Specialist", status: "offline",
+      tasks: []}
+  ];
+
+  let selectedId = agents[0].id;
+  let searchQuery = "";
+  let uidCounter = 100;
+
+  const uid = (prefix) => prefix + (uidCounter++);
+
+  const STATUS_ORDER = ["active", "idle", "offline"];
+
+  /* ============================================================
+     DOM REFS
+     ============================================================ */
+  const rosterList     = document.getElementById("rosterList");
+  const detailPanel     = document.getElementById("detailPanel");
+  const opsLog          = document.getElementById("opsLog");
+  const statAgents      = document.getElementById("statAgents");
+  const statTasks       = document.getElementById("statTasks");
+  const statOpen        = document.getElementById("statOpen");
+  const searchInput     = document.getElementById("searchInput");
+
+  const addAgentModal   = document.getElementById("addAgentModal");
+  const addAgentForm    = document.getElementById("addAgentForm");
+  const agentNameInput  = document.getElementById("agentName");
+  const agentRoleInput  = document.getElementById("agentRole");
+  const nameError       = document.getElementById("nameError");
+  const roleError       = document.getElementById("roleError");
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[c]));
+  }
+
+  function initials(name){
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+  }
+
+  function findAgent(id){ return agents.find(a => a.id === id) || null; }
+
+  function logAction(message, kind){
+    const time = new Date().toLocaleTimeString([], { hour12:false });
+    const line = document.createElement("div");
+    line.className = "log-line " + (kind || "");
+    line.innerHTML =
+      `<span class="t">${time}</span><span class="dot">●</span><span class="msg">${escapeHtml(message)}</span>`;
+    opsLog.prepend(line);
+  }
+
+  /* ============================================================
+     RENDER: STATS
+     ============================================================ */
+  function renderStats(){
+    const totalTasks = agents.reduce((sum, a) => sum + a.tasks.length, 0);
+    const openTasks   = agents.reduce((sum, a) => sum + a.tasks.filter(t => !t.done).length, 0);
+    statAgents.textContent = agents.length;
+    statTasks.textContent  = totalTasks;
+    statOpen.textContent   = openTasks;
+  }
+
+  /* ============================================================
+     RENDER: ROSTER (sidebar)
+     ============================================================ */
+  function renderRoster(){
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = agents.filter(a =>
+      !q || a.name.toLowerCase().includes(q) || a.role.toLowerCase().includes(q)
+    );
+
+    if (filtered.length === 0){
+      rosterList.innerHTML = `<div class="roster-empty">${
+        agents.length === 0
+          ? "No agents yet. Add one to get started."
+          : "No agents match your search."
+      }</div>`;
+      return;
+    }
+
+    rosterList.innerHTML = filtered.map(a => `
+      <button class="agent-row ${a.id === selectedId ? "selected" : ""}"
+              data-id="${a.id}" role="option" aria-selected="${a.id === selectedId}">
+        <span class="signal-avatar ${a.status}">
+          ${initials(a.name)}<span class="dot"></span>
+        </span>
+        <span class="agent-row-meta">
+          <span class="nm">${escapeHtml(a.name)}</span>
+          <span class="rl">${escapeHtml(a.role)}</span>
+        </span>
+        <span class="task-badge">${a.tasks.length}</span>
+      </button>
+    `).join("");
+
+    rosterList.querySelectorAll(".agent-row").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedId = btn.dataset.id;
+        renderAll();
+      });
+    });
+  }
+
+  /* ============================================================
+     RENDER: DETAIL PANEL (main)
+     ============================================================ */
+  function renderDetail(){
+    const agent = findAgent(selectedId);
+
+    if (!agent){
+      detailPanel.innerHTML = `
+        <div class="empty-state">
+          <div class="glyph mono">AO</div>
+          <h3>No agent selected</h3>
+          <p>Choose an agent from the roster, or add a new one, to view and manage its tasks.</p>
+        </div>`;
+      return;
+    }
+
+    const openCount = agent.tasks.filter(t => !t.done).length;
+
+    detailPanel.innerHTML = `
+      <div class="detail-head">
+        <div class="detail-id">
+          <span class="signal-avatar ${agent.status}">${initials(agent.name)}<span class="dot"></span></span>
+          <div>
+            <div class="nm">${escapeHtml(agent.name)}</div>
+            <div class="rl">${escapeHtml(agent.role)} · ${openCount} open task${openCount === 1 ? "" : "s"}</div>
+            <button class="status-toggle ${agent.status}" id="statusToggle" title="Click to cycle status">
+              ${agent.status}
+            </button>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-danger btn-sm" id="deleteAgentBtn">Remove agent</button>
+        </div>
+      </div>
+
+      <form class="task-form" id="taskForm">
+        <input type="text" id="taskInput" placeholder="Assign a new task to ${escapeHtml(agent.name)}…" autocomplete="off">
+        <button type="submit" class="btn btn-accent">Assign</button>
+      </form>
+
+      <div class="task-list" id="taskList">
+        ${agent.tasks.length === 0
+          ? `<div class="task-list-empty">No tasks assigned yet.</div>`
+          : agent.tasks.map((t, i) => `
+            <div class="task-item" data-id="${t.id}">
+              <span class="task-idx mono">${String(i+1).padStart(2,"0")}</span>
+              <span class="task-check ${t.done ? "done" : ""}" data-action="toggle" role="checkbox" aria-checked="${t.done}" tabindex="0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+              </span>
+              <span class="task-text ${t.done ? "done" : ""}">${escapeHtml(t.text)}</span>
+              <button class="task-del" data-action="delete" aria-label="Delete task">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          `).join("")
+        }
+      </div>
+    `;
+
+    // wire up detail-panel events
+    document.getElementById("statusToggle").addEventListener("click", () => cycleStatus(agent.id));
+    document.getElementById("deleteAgentBtn").addEventListener("click", () => deleteAgent(agent.id));
+    document.getElementById("taskForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = document.getElementById("taskInput");
+      addTask(agent.id, input.value);
+      input.value = "";
+      input.focus();
+    });
+
+    document.getElementById("taskList").querySelectorAll("[data-action='toggle']").forEach(el => {
+      const handler = () => toggleTask(agent.id, el.closest(".task-item").dataset.id);
+      el.addEventListener("click", handler);
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); handler(); } });
+    });
+    document.getElementById("taskList").querySelectorAll("[data-action='delete']").forEach(el => {
+      el.addEventListener("click", () => deleteTask(agent.id, el.closest(".task-item").dataset.id));
+    });
+  }
+
+  function renderAll(){
+    renderStats();
+    renderRoster();
+    renderDetail();
+  }
+
+  /* ============================================================
+     ACTIONS — Agents
+     ============================================================ */
+  function addAgent(name, role){
+    const agent = { id: uid("a"), name, role, status: "active", tasks: [] };
+    agents.push(agent);
+    selectedId = agent.id;
+    logAction(`Agent "${name}" added to roster.`, "add");
+    renderAll();
+  }
+
+  function deleteAgent(id){
+    const agent = findAgent(id);
+    if (!agent) return;
+    if (!confirm(`Remove ${agent.name} and all of their tasks?`)) return;
+    agents = agents.filter(a => a.id !== id);
+    if (selectedId === id){
+      selectedId = agents.length ? agents[0].id : null;
+    }
+    logAction(`Agent "${agent.name}" removed.`, "danger");
+    renderAll();
+  }
+
+  function cycleStatus(id){
+    const agent = findAgent(id);
+    if (!agent) return;
+    const next = STATUS_ORDER[(STATUS_ORDER.indexOf(agent.status) + 1) % STATUS_ORDER.length];
+    agent.status = next;
+    logAction(`${agent.name} status set to ${next}.`, next === "offline" ? "danger" : (next === "idle" ? "warn" : "add"));
+    renderAll();
+  }
+
+  /* ============================================================
+     ACTIONS — Tasks
+     ============================================================ */
+  function addTask(agentId, text){
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const agent = findAgent(agentId);
+    if (!agent) return;
+    agent.tasks.push({ id: uid("t"), text: trimmed, done: false });
+    logAction(`Task assigned to ${agent.name}: "${trimmed}"`, "add");
+    renderAll();
+  }
+
+  function toggleTask(agentId, taskId){
+    const agent = findAgent(agentId);
+    if (!agent) return;
+    const task = agent.tasks.find(t => t.id === taskId);
+    if (!task) return;
+    task.done = !task.done;
+    logAction(`${agent.name}: "${task.text}" marked ${task.done ? "done" : "open"}.`, task.done ? "add" : "warn");
+    renderAll();
+  }
+
+  function deleteTask(agentId, taskId){
+    const agent = findAgent(agentId);
+    if (!agent) return;
+    const task = agent.tasks.find(t => t.id === taskId);
+    agent.tasks = agent.tasks.filter(t => t.id !== taskId);
+    if (task) logAction(`Task removed from ${agent.name}: "${task.text}"`, "danger");
+    renderAll();
+  }
+
+  /* ============================================================
+     ADD-AGENT MODAL
+     ============================================================ */
+  function openModal(){
+    addAgentModal.hidden = false;
+    nameError.classList.remove("show");
+    roleError.classList.remove("show");
+    addAgentForm.reset();
+    agentNameInput.focus();
+  }
+  function closeModal(){ addAgentModal.hidden = true; }
+
+  document.getElementById("openAddAgent").addEventListener("click", openModal);
+  document.getElementById("cancelAddAgent").addEventListener("click", closeModal);
+  addAgentModal.addEventListener("click", (e) => { if (e.target === addAgentModal) closeModal(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !addAgentModal.hidden) closeModal(); });
+
+  addAgentForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = agentNameInput.value.trim();
+    const role = agentRoleInput.value.trim();
+    let valid = true;
+
+    if (!name){ nameError.classList.add("show"); valid = false; } else { nameError.classList.remove("show"); }
+    if (!role){ roleError.classList.add("show"); valid = false; } else { roleError.classList.remove("show"); }
+    if (!valid) return;
+
+    addAgent(name, role);
+    closeModal();
+  });
+
+  /* ============================================================
+     SEARCH
+     ============================================================ */
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value;
+    renderRoster();
+  });
+
+  /* ============================================================
+     EXPORT / IMPORT (stand-in for save/load-to-file)
+     ============================================================ */
+  document.getElementById("exportBtn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify({ agents }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "agent-ops-export.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    logAction("Roster exported to agent-ops-export.json.", "add");
+  });
+
+  const importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if (!Array.isArray(data.agents)) throw new Error("Invalid file shape");
+        agents = data.agents;
+        selectedId = agents.length ? agents[0].id : null;
+        logAction(`Roster loaded from "${file.name}".`, "add");
+        renderAll();
+      } catch(err){
+        logAction(`Import failed: ${err.message}`, "danger");
+        alert("That file doesn't look like a valid Agent Ops export.");
+      }
+    };
+    reader.readAsText(file);
+    importFile.value = "";
+  });
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  logAction("System online. Roster loaded from memory.", "add");
+  renderAll();
+})();
+</script>
+</body>
+</html>
