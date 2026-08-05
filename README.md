@@ -165,7 +165,7 @@ Tasks successfully saved to tasks_data.txt!
 | Method | Description |
 |--------|-------------|
 | `add_agent(agent)` | Adds a new agent to the system |
-| `display_all_agents()` | Shows summary of all agents and their tasks |
+| `display_all_agents()` | Shows a summary of all agents and their tasks |
 | `save_tasks_to_file()` | Persists all agent data to a text file |
 | `load_tasks_from_file()` | Loads agent data from a text file |
 
@@ -236,7 +236,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📫 Contact
 
-**Your Name** - [Your Email] - [Your LinkedIn/GitHub]
+**Yashfa waseem** : yashfawaseem2006@gmail.com
 
 **Project Link**: [https://github.com/yourusername/ai-agent-task-manager](https://github.com/yourusername/ai-agent-task-manager)
 
